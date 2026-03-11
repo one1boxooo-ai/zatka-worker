@@ -11,17 +11,18 @@ function randomHex(len = 16) {
 
 export default {
   async fetch(request) {
+
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
-      "Content-Type": "application/json; charset=utf-8",
+      "Content-Type": "application/json"
     };
 
     const json = (body, status = 200) =>
       new Response(JSON.stringify(body, null, 2), {
         status,
-        headers: corsHeaders,
+        headers: corsHeaders
       });
 
     if (request.method === "OPTIONS") {
@@ -33,6 +34,7 @@ export default {
     }
 
     try {
+
       const body = await request.json();
 
       const company_name = String(body.company_name || "").trim();
@@ -43,8 +45,9 @@ export default {
       const otp = String(body.otp || "").trim();
 
       const invoice_type = String(body.invoice_type || "1100").trim();
+
       const common_name = String(
-        body.common_name || `TST-${vat_number || "DEVICE"}`
+        body.common_name || `TST-${vat_number}`
       ).trim();
 
       const egs_manufacturer = String(
@@ -59,30 +62,31 @@ export default {
         body.egs_unit_serial || randomHex(16)
       ).trim();
 
-      const egs_serial_number = String(
+      const egs_serial_number =
         body.egs_serial_number ||
-          `1-${egs_manufacturer}|2-${egs_model}|3-${egs_unit_serial}`
-      ).trim();
+        `1-${egs_manufacturer}|2-${egs_model}|3-${egs_unit_serial}`;
 
       if (!company_name) {
-        return json({ ok: false, error: "company_name is required" }, 400);
+        return json({ ok: false, error: "company_name required" }, 400);
       }
 
       if (!vat_number) {
-        return json({ ok: false, error: "vat_number is required" }, 400);
+        return json({ ok: false, error: "vat_number required" }, 400);
       }
 
       if (!city) {
-        return json({ ok: false, error: "city is required" }, 400);
+        return json({ ok: false, error: "city required" }, 400);
       }
 
       if (!address) {
-        return json({ ok: false, error: "address is required" }, 400);
+        return json({ ok: false, error: "address required" }, 400);
       }
 
-      // ملاحظة: otp الآن فقط نرجعه في preview إن وجد
-      // لاحقًا سنستخدمه عند ربط إرسال CSR إلى ZATCA
+      /* توليد المفاتيح */
+
       const keys = forge.pki.rsa.generateKeyPair(2048);
+
+      /* إنشاء CSR */
 
       const csr = forge.pki.createCertificationRequest();
       csr.publicKey = keys.publicKey;
@@ -92,7 +96,7 @@ export default {
         { name: "organizationName", value: company_name },
         { name: "organizationalUnitName", value: branch_name },
         { name: "localityName", value: city },
-        { shortName: "serialNumber", value: vat_number },
+        { type: "2.5.4.5", value: vat_number }   // serialNumber
       ]);
 
       csr.sign(keys.privateKey, forge.md.sha256.create());
@@ -103,6 +107,7 @@ export default {
       return json({
         ok: true,
         message: "CSR generated successfully",
+
         generated_values: {
           company_name,
           vat_number,
@@ -115,19 +120,22 @@ export default {
           egs_manufacturer,
           egs_model,
           egs_unit_serial,
-          egs_serial_number,
+          egs_serial_number
         },
+
         csr: csrPem,
-        private_key: privateKeyPem,
+        private_key: privateKeyPem
+
       });
+
     } catch (error) {
-      return json(
-        {
-          ok: false,
-          error: error?.message || String(error),
-        },
-        500
-      );
+
+      return json({
+        ok: false,
+        error: error.message
+      }, 500);
+
     }
-  },
+
+  }
 };
