@@ -60,13 +60,14 @@ export default {
 
       const common_name = `TST-${vat}`;
 
-      /* key pair */
+      /* توليد مفتاح ECDSA */
 
-      const keys = forge.pki.rsa.generateKeyPair(2048);
+      const ec = forge.pki.ec;
+      const keypair = ec.generateKeyPair({ namedCurve: "secp256k1" });
 
       const csr = forge.pki.createCertificationRequest();
 
-      csr.publicKey = keys.publicKey;
+      csr.publicKey = keypair.publicKey;
 
       csr.setSubject([
         { name: "commonName", value: common_name },
@@ -76,32 +77,13 @@ export default {
         { type: "2.5.4.5", value: vat }
       ]);
 
-      csr.setAttributes([
-        {
-          name: "extensionRequest",
-          extensions: [
-
-            {
-              id: "1.3.6.1.4.1.311.20.2",
-              value: egs_serial
-            },
-
-            {
-              id: "1.3.6.1.4.1.311.20.2.3",
-              value: address
-            }
-
-          ]
-        }
-      ]);
-
-      csr.sign(keys.privateKey, forge.md.sha256.create());
+      csr.sign(keypair.privateKey, forge.md.sha256.create());
 
       const csrPem = forge.pki.certificationRequestToPem(csr);
 
       const csrBase64 = pemToBase64(csrPem);
 
-      const privateKeyPem = forge.pki.privateKeyToPem(keys.privateKey);
+      const privateKeyPem = forge.pki.privateKeyToPem(keypair.privateKey);
 
       const zatca = await fetch(
         "https://gw-fatoora.zatca.gov.sa/e-invoicing/simulation/compliance",
