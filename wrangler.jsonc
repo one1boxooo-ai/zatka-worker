@@ -1,5 +1,5 @@
 {
-  "name": "zatkaonboarding",
+  "name": "zatka-worker",
   "main": "src/worker.js",
   "compatibility_date": "2026-03-11",
   "compatibility_flags": ["nodejs_compat"]
